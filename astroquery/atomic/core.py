@@ -1,9 +1,9 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-from astropy.extern.six.moves.urllib import parse as urlparse
-from astropy.extern.six.moves import map, zip
-from astropy.extern.six import StringIO
-from astropy.extern import six
+from six.moves.urllib import parse as urlparse
+from six.moves import map, zip
+from six import StringIO
+import six
 
 from collections import defaultdict
 
@@ -123,11 +123,11 @@ class AtomicLineListClass(BaseQuery):
                     transitions of other elements.
                 - A union of the values: One of the following:
                   ``'E1'``, ``'IC'``, ``'M1'``, ``'E2'``
-                  Refer to the documentation_ for the meaning of these values.
+                  Refer to [1]_ for the meaning of these values.
 
         show_fine_structure : bool
              If `True`, the fine structure components will be included in
-             the output. Refer to the documentation_ for more information.
+             the output. Refer to [1]_ for more information.
 
         show_auto_ionizing_transitions : bool
             If `True`, transitions originating from auto-ionizing levels
@@ -149,7 +149,9 @@ class AtomicLineListClass(BaseQuery):
         result : `~astropy.table.Table`
             The result of the query as a `~astropy.table.Table` object.
 
-        .. _documentation: http://www.pa.uky.edu/~peter/atomic/instruction.html
+        References
+        ----------
+        .. [1] http://www.pa.uky.edu/~peter/atomic/instruction.html
         """
         response = self.query_object_async(
             wavelength_range=wavelength_range, wavelength_type=wavelength_type,
@@ -196,7 +198,10 @@ class AtomicLineListClass(BaseQuery):
         else:
             raise ValueError('parameter wavelength_type must be either "air" '
                              'or "vacuum".')
-        wlrange = wavelength_range or []
+        if wavelength_range is not None:
+            wlrange = wavelength_range
+        else:
+            wlrange = []
         if len(wlrange) not in (0, 2):
             raise ValueError('Length of `wavelength_range` must be 2 or 0, '
                              'but is: {}'.format(len(wlrange)))
@@ -222,11 +227,11 @@ class AtomicLineListClass(BaseQuery):
         lower_level_erange = lower_level_energy_range
         if lower_level_erange is not None:
             lower_level_erange = lower_level_erange.to(
-                u.cm ** -1, equivalencies=u.spectral()).value()
+                u.cm ** -1, equivalencies=u.spectral()).value
         upper_level_erange = upper_level_energy_range
         if upper_level_erange is not None:
             upper_level_erange = upper_level_erange.to(
-                u.cm ** -1, equivalencies=u.spectral()).value()
+                u.cm ** -1, equivalencies=u.spectral()).value
         input = {
             'wavl': '-'.join(map(str, wlrange_in_angstroms)),
             'wave': 'Angstrom',
@@ -278,7 +283,7 @@ class AtomicLineListClass(BaseQuery):
                 input.append('\t'.join(row))
         if input:
             return ascii.read(input, data_start=0, delimiter='\t',
-                              names=colnames)
+                              names=colnames, fast_reader=False)
         else:
             # return an empty table if the query yielded no results
             return Table()

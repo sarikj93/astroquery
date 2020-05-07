@@ -14,8 +14,10 @@ Introduction
 Astroquery is a set of tools for querying astronomical web forms and databases.
 
 There are two other packages with complimentary functionality as Astroquery:
-`astropy.vo <http://docs.astropy.org/en/latest/vo/index.html>`_ is in the Astropy core and
-`pyvo <https://pyvo.readthedocs.io/en/latest/>`_ is an Astropy affiliated package.
+`pyvo <https://pyvo.readthedocs.io/en/latest/>`_ is an Astropy affiliated package, and
+`Simple-Cone-Search-Creator <https://github.com/tboch/Simple-Cone-Search-Creator/>`_ to
+generate a cone search service complying with the
+`IVOA standard <http://www.ivoa.net/documents/latest/ConeSearch.html>`_.
 They are more oriented to general `virtual observatory <http://www.virtualobservatory.org>`_
 discovery and queries, whereas Astroquery has web service specific interfaces.
 
@@ -23,26 +25,21 @@ Check out the :doc:`gallery` for some nice examples.
 
 Installation
 ------------
-The latest version of astroquery can be conda installed while the latest and
-development versions can be pip installed or be downloaded directly from GitHub.
 
-Using pip
-^^^^^^^^^
-.. code-block:: bash
+Astroquery has recently switched to a continuous deployment model, meaning
+that a release will be instantaniously available after each set of changes
+made to the code.
+The latest version of astroquery can be pip installed.
 
-    $ pip install astroquery
-
-and the 'bleeding edge' master version:
+\*Note: If an environment already has an older version of astroquery installed
+add ``--upgrade`` to make sure the latest version is installed.
 
 .. code-block:: bash
 
-   $ pip install https://github.com/astropy/astroquery/archive/master.zip
+    $ pip install --pre astroquery
 
-Using conda
-^^^^^^^^^^^
-
-It is also possible to install the latest astroquery with `anaconda
-<http://continuum.io/>`_ from the astropy channel:
+We also keep doing regular, tagged version for maintanence purposes. These
+can be then conda installed from the ``astropy`` conda channel.
 
 .. code-block:: bash
 
@@ -67,26 +64,46 @@ The development version can be obtained and installed from github:
 Requirements
 ------------
 
-Astroquery works with Python 2.7 and 3.4 or later.
+Astroquery works with Python 3.6 or later.
 
 The following packages are required for astroquery installation & use:
 
-* `numpy <http://www.numpy.org>`_ >= 1.9
-* `astropy <http://www.astropy.org>`__ (>=1.0)
+* `numpy <http://www.numpy.org>`_ >= 1.14
+* `astropy <http://www.astropy.org>`__ (>=2.0)
 * `requests <http://docs.python-requests.org/en/latest/>`_
 * `keyring <https://pypi.python.org/pypi/keyring>`_
-* `Beautiful Soup <http://www.crummy.com/software/BeautifulSoup/>`_
+* `Beautiful Soup <https://www.crummy.com/software/BeautifulSoup/>`_
 * `html5lib <https://pypi.python.org/pypi/html5lib>`_
+* `six <http://pypi.python.org/pypi/six/>`_
 
 and for running the tests:
 
 * `curl <https://curl.haxx.se/>`__
+* `pytest-astropy <https://github.com/astropy/pytest-astropy>`__
 
 The following packages are optional dependencies and are required for the
 full functionality of the `~astroquery.alma` module:
 
 * `APLpy <http://aplpy.readthedocs.io/>`_
 * `pyregion <http://pyregion.readthedocs.io/>`_
+
+
+The following packages are optional dependencies and are required for the
+functionality of the `~astroquery.cadc` module:
+
+* `pyVO`_ (>=1.0)
+
+The following packages are optional dependencies and are required for the
+full functionality of the `~astroquery.cds` module:
+
+* `astropy-healpix <http://astropy-healpix.readthedocs.io/en/latest/>`_
+* `regions <https://astropy-regions.readthedocs.io/en/latest/>`_
+* `mocpy <https://cds-astro.github.io/mocpy/>`_ >= 0.5.2
+
+The following packages are optional dependencies and are required for the
+full functionality of the `~astroquery.mast` module:
+
+* `boto3 <https://boto3.readthedocs.io/>`_
 
 Using astroquery
 ----------------
@@ -142,49 +159,71 @@ The following modules have been completed using a common API:
 .. toctree::
   :maxdepth: 1
 
-  simbad/simbad.rst
-  vizier/vizier.rst
+  alma/alma.rst
+  atomic/atomic.rst
+  besancon/besancon.rst
+  cadc/cadc.rst
+  casda/casda.rst
+  cds/cds.rst
+  esa/hubble.rst
   esasky/esasky.rst
-  irsa/irsa_dust.rst
-  ned/ned.rst
-  splatalogue/splatalogue.rst
-  vamdc/vamdc.rst
+  eso/eso.rst
+  gaia/gaia.rst
+  gama/gama.rst
+  gemini/gemini.rst
+  heasarc/heasarc.rst
+  hitran/hitran.rst
   ibe/ibe.rst
   irsa/irsa.rst
-  ukidss/ukidss.rst
+  irsa/irsa_dust.rst
+  jplspec/jplspec.rst
   magpis/magpis.rst
-  nrao/nrao.rst
-  besancon/besancon.rst
-  nist/nist.rst
-  nvas/nvas.rst
-  gama/gama.rst
-  eso/eso.rst
-  xmatch/xmatch.rst
-  atomic/atomic.rst
-  alma/alma.rst
-  skyview/skyview.rst
-  nasa_ads/nasa_ads.rst
-  heasarc/heasarc.rst
-  gaia/gaia.rst
-  vo_conesearch/vo_conesearch.rst
   mast/mast.rst
+  mpc/mpc.rst
+  nasa_ads/nasa_ads.rst
+  ned/ned.rst
+  nist/nist.rst
+  noirlab/noirlab.rst
+  nrao/nrao.rst
+  nvas/nvas.rst
+  simbad/simbad.rst
+  skyview/skyview.rst
+  splatalogue/splatalogue.rst
+  ukidss/ukidss.rst
+  vamdc/vamdc.rst
+  vizier/vizier.rst
+  vo_conesearch/vo_conesearch.rst
+  vsa/vsa.rst
+  xmatch/xmatch.rst
+  dace/dace.rst
+  esa/xmm_newton.rst
+
 
 These others are functional, but do not follow a common & consistent API:
 
 .. toctree::
   :maxdepth: 1
 
-  fermi/fermi.rst
-  sdss/sdss.rst
   alfalfa/alfalfa.rst
-  sha/sha.rst
+  cosmosim/cosmosim.rst
+  exoplanet_orbit_database/exoplanet_orbit_database.rst
+  fermi/fermi.rst
+  jplhorizons/jplhorizons.rst
+  jplsbdb/jplsbdb.rst
   lamda/lamda.rst
+  nasa_exoplanet_archive/nasa_exoplanet_archive.rst
+  oac/oac.rst
   ogle/ogle.rst
   open_exoplanet_catalogue/open_exoplanet_catalogue.rst
-  cosmosim/cosmosim.rst
-  hitran/hitran.rst
-  nasa_exoplanet_archive/nasa_exoplanet_archive.rst
-  exoplanet_orbit_database/exoplanet_orbit_database.rst
+  sdss/sdss.rst
+  sha/sha.rst
+
+There are also subpackages that serve as the basis of others.
+
+.. toctree::
+  :maxdepth: 1
+
+  wfau/wfau.rst
 
 Catalog, Archive, and Other
 ===========================
@@ -207,6 +246,7 @@ for each source)
   ibe/ibe.rst
   irsa/irsa.rst
   irsa/irsa_dust.rst
+  mast/mast.rst
   ned/ned.rst
   ogle/ogle.rst
   open_exoplanet_catalogue/open_exoplanet_catalogue.rst
@@ -214,6 +254,7 @@ for each source)
   sha/sha.rst
   simbad/simbad.rst
   ukidss/ukidss.rst
+  vsa/vsa.rst
   vizier/vizier.rst
   xmatch/xmatch.rst
   vo_conesearch/vo_conesearch.rst
@@ -231,6 +272,9 @@ generally return a table listing the available data first.
 
   alfalfa/alfalfa.rst
   alma/alma.rst
+  cadc/cadc.rst
+  casda/casda.rst
+  esa/hubble.rst
   eso/eso.rst
   fermi/fermi.rst
   gaia/gaia.rst
@@ -238,19 +282,23 @@ generally return a table listing the available data first.
   ibe/ibe.rst
   irsa/irsa.rst
   magpis/magpis.rst
+  gemini/gemini.rst
   mast/mast.rst
   ned/ned.rst
+  noirlab/noirlab.rst
   nrao/nrao.rst
   nvas/nvas.rst
   sdss/sdss.rst
   sha/sha.rst
   ukidss/ukidss.rst
+  vsa/vsa.rst
   skyview/skyview.rst
+  esa/xmm_newton.rst
 
 Simulations
 -----------
 
-Simulation services query databases of simulated or synthetic data
+These services query databases of simulated or synthetic data:
 
 .. toctree::
   :maxdepth: 1
@@ -258,12 +306,11 @@ Simulation services query databases of simulated or synthetic data
   besancon/besancon.rst
   cosmosim/cosmosim.rst
 
-Other
------
+Line List Services
+------------------
 
-There are other astronomically significant services, e.g. line list and
-atomic/molecular cross section and collision rate services, that don't fit the
-above categories.
+There are several web services that provide atomic or molecular line lists, as
+well as  cross section and collision rates.  Those services are:
 
 .. toctree::
   :maxdepth: 1
@@ -272,10 +319,37 @@ above categories.
   lamda/lamda.rst
   nist/nist.rst
   splatalogue/splatalogue.rst
-  nasa_ads/nasa_ads.rst
   vamdc/vamdc.rst
   hitran/hitran.rst
+
+Other
+-----
+
+There are other astronomically significant services, that don't fit the
+above categories. Those services are here:
+
+.. toctree::
+  :maxdepth: 1
+
+  nasa_ads/nasa_ads.rst
   utils/tap.rst
+  jplhorizons/jplhorizons.rst
+  jplsbdb/jplsbdb.rst
+  jplspec/jplspec.rst
+  imcce/imcce.rst
+  astrometry_net/astrometry_net.rst
+
+
+Topical Collections
+===================
+
+Some services focusing on similar topics are also collected in
+topical submodules:
+
+.. toctree::
+  :maxdepth: 1
+
+  solarsystem/solarsystem.rst
 
 
 Developer documentation

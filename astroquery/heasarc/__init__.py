@@ -17,9 +17,10 @@ class Conf(_config.ConfigNamespace):
     """
     Configuration parameters for `astroquery.heasarc`.
     """
+
     server = _config.ConfigItem(
-        ['http://heasarc.gsfc.nasa.gov/cgi-bin/W3Browse/w3query_noredir.pl'],
-        'Name of the HEASARC server to use.')
+        ['https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3query.pl'],
+        'Name of the HEASARC server used to query available missions.')
 
     timeout = _config.ConfigItem(
         30,

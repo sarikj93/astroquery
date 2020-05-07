@@ -1,9 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Validate VO Services."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-from astropy.extern import six
-from astropy.extern.six.moves import map
 
 # STDLIB
 import multiprocessing
@@ -18,21 +14,18 @@ from astropy.io.votable.validator import html, result
 from astropy.logger import log
 from astropy.utils import data
 from astropy.utils.exceptions import AstropyUserWarning
-from astropy.utils.timer import timefunc
 from astropy.utils.xml.unescaper import unescape_all
 
 # LOCAL
+from .tstquery import parse_cs
 from .exceptions import (ValidationMultiprocessingError,
                          InvalidValidationAttribute)
 from ..exceptions import VOSError
 from ..vos_catalog import VOSDatabase, vo_tab_parse
+from ...utils.timer import timefunc
 
 # Import configurable items declared in __init__.py
 from . import conf
-
-# Temporary solution until STScI VAO registry formally provides
-# <testQuery> tags
-from .tstquery import parse_cs
 
 __all__ = ['check_conesearch_sites']
 
@@ -91,7 +84,7 @@ def check_conesearch_sites(destdir=os.curdir, verbose=True, parallel=True,
     if url_list == 'default':
         url_list = conf.conesearch_urls
 
-    if (not isinstance(destdir, six.string_types) or len(destdir) == 0 or
+    if (not isinstance(destdir, str) or len(destdir) == 0 or
             os.path.exists(destdir) and not os.path.isdir(destdir)):
         raise IOError('Invalid destination directory')  # pragma: no cover
 
@@ -156,13 +149,13 @@ def check_conesearch_sites(destdir=os.curdir, verbose=True, parallel=True,
         # Skip if:
         #   a. not a Cone Search service
         #   b. not in given subset, if any
-        if ((cur_cat['capabilityClass'] != b'ConeSearch') or
+        if ((cur_cat['cap_type'] != b'conesearch') or
                 (url_list is not None and cur_url not in url_list)):
             continue
 
         # Use testQuery to return non-empty VO table with max verbosity.
-        testquery_pars = parse_cs(cur_cat['resourceID'])
-        cs_pars_arr = ['='.join([key, testquery_pars[key]]).encode('utf-8')
+        testquery_pars = parse_cs(cur_cat['ivoid'], cur_cat['cap_index'])
+        cs_pars_arr = ['{}={}'.format(key, testquery_pars[key]).encode('utf-8')
                        for key in testquery_pars]
         cs_pars_arr += [b'VERB=3']
 
@@ -267,7 +260,7 @@ def _do_validation(args):
 
         with warnings.catch_warnings(record=True) as warning_lines:
             try:
-                tab = vo_tab_parse(votable.table.parse(
+                vo_tab_parse(votable.table.parse(
                     r.get_vo_xml_path(), pedantic=False), r.url, {})
             except (E19, IndexError, VOSError) as e:  # pragma: no cover
                 lines.append(str(e))

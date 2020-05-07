@@ -8,7 +8,7 @@ import re
 import os
 import warnings
 from astropy.io import ascii
-from astropy.extern.six.moves.urllib_error import URLError
+from six.moves.urllib_error import URLError
 from collections import OrderedDict
 from ..query import BaseQuery
 from ..utils import commons, prepend_docstr_nosections, async_to_sync
@@ -423,13 +423,10 @@ def parse_besancon_model_string(bms,):
         raise ValueError("Table parsing error: mismatch between # of "
                          "columns & header")
 
-    besancon_table = ascii.read(bms, Reader=ascii.FixedWidthNoHeader,
-                                header_start=None,
-                                data_start=data_start,
-                                names=names,
-                                col_starts=col_starts,
-                                col_ends=col_ends,
-                                data_end=data_end)
+    besancon_table = ascii.read(bms, format='fixed_width_no_header',
+                                data_start=data_start, data_end=data_end,
+                                col_starts=col_starts, col_ends=col_ends,
+                                names=names, fast_reader=False)
 
     if len(besancon_table) != nstars:
         raise ValueError("Besancon table did not match reported size")

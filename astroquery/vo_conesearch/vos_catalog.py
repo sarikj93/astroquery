@@ -8,16 +8,12 @@ Common utilities for accessing VO simple services.
     backward-compatibility with ``astropy.vo.client``.
 
 """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-from astropy.extern import six
-from astropy.extern.six.moves import urllib
-
 import fnmatch
 import json
 import os
 import re
 import socket
+import urllib
 import warnings
 from collections import defaultdict
 from copy import deepcopy
@@ -573,7 +569,7 @@ class VOSDatabase(VOSBase):
                 tab_all = parse_single_table(fd, pedantic=False)
 
         # Registry must have these fields
-        compulsory_fields = ['title', 'accessURL']
+        compulsory_fields = ['res_title', 'access_url']
         cat_fields = tab_all.array.dtype.names
         for field in compulsory_fields:
             if field not in cat_fields:  # pragma: no cover
@@ -597,8 +593,8 @@ class VOSDatabase(VOSBase):
                 # For primary key, a number needs to be appended to the title
                 # because registry can have multiple entries with the same
                 # title but different URLs.
-                if field == 'title':
-                    cur_title = arr['title']
+                if field == 'res_title':
+                    cur_title = arr['res_title']
                     title_counter[cur_title] += 1  # Starts with 1
 
                     if isinstance(cur_title, bytes):  # pragma: py3
@@ -608,12 +604,15 @@ class VOSDatabase(VOSBase):
                         cur_key = title_fmt.format(cur_title,
                                                    title_counter[cur_title])
 
-                # Special handling of access URL, otherwise no change.
-                if field == 'accessURL':
-                    s = unescape_all(arr['accessURL'])
-                    if isinstance(s, six.binary_type):
+                # Special handling of title and access URL,
+                # otherwise no change.
+                if field == 'access_url':
+                    s = unescape_all(arr['access_url'])
+                    if isinstance(s, bytes):
                         s = s.decode('utf-8')
                     cur_cat['url'] = s
+                elif field == 'res_title':
+                    cur_cat['title'] = arr[field]
                 else:
                     cur_cat[field] = arr[field]
 
@@ -694,11 +693,11 @@ def _get_catalogs(service_type, catalog_db, **kwargs):
         catalogs = catalog_db.get_catalogs()
     elif isinstance(catalog_db, VOSDatabase):
         catalogs = catalog_db.get_catalogs()
-    elif isinstance(catalog_db, (VOSCatalog, six.string_types)):
+    elif isinstance(catalog_db, (VOSCatalog, str)):
         catalogs = [(None, catalog_db)]
     elif isinstance(catalog_db, list):
         for x in catalog_db:
-            assert (isinstance(x, (VOSCatalog, six.string_types)) and
+            assert (isinstance(x, (VOSCatalog, str)) and
                     not isinstance(x, VOSDatabase))
         catalogs = [(None, x) for x in catalog_db]
     else:  # pragma: no cover
@@ -722,7 +721,7 @@ def _vo_service_request(url, pedantic, kwargs, cache=True, verbose=False):
         raise InvalidAccessURL("url should already end with '?' or '&'")
 
     query = []
-    for key, value in six.iteritems(kwargs):
+    for key, value in kwargs.items():
         query.append('{0}={1}'.format(
             urllib.parse.quote(key), urllib.parse.quote_plus(str(value))))
 
@@ -881,7 +880,7 @@ def call_vo_service(service_type, catalog_db=None, pedantic=None,
         pedantic = conf.pedantic
 
     for name, catalog in catalogs:
-        if isinstance(catalog, six.string_types):
+        if isinstance(catalog, str):
             if catalog.startswith('http'):
                 url = catalog
             else:

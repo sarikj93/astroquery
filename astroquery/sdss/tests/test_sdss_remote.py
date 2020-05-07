@@ -1,33 +1,22 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import numpy as np
+from numpy.testing import assert_allclose
 import pytest
 
 from astropy import coordinates
 from astropy.table import Table
-from astropy.tests.helper import remote_data
+
+from six.moves.urllib_error import URLError
 
 from ... import sdss
 from ...exceptions import TimeoutError
 
 
-@remote_data
-def test_images_timeout():
-    """
-    An independent timeout test to verify that test_images_timeout in the
-    TestSDSSRemote class should be working.  Consider this a regression test.
-    """
-    coords = coordinates.SkyCoord('0h8m05.63s +14d50m23.3s')
-    xid = sdss.SDSS.query_region(coords)
-    assert len(xid) == 18
-    with pytest.raises(TimeoutError):
-        sdss.SDSS.get_images(matches=xid, timeout=1e-6, cache=False)
-
-
-@remote_data
+@pytest.mark.remote_data
 class TestSDSSRemote:
     # Test Case: A Seyfert 1 galaxy
     coords = coordinates.SkyCoord('0h8m05.63s +14d50m23.3s')
-    mintimeout = 1e-6
+    mintimeout = 1e-2
 
     def test_images_timeout(self):
         """
@@ -36,9 +25,14 @@ class TestSDSSRemote:
         """
         xid = sdss.SDSS.query_region(self.coords)
         assert len(xid) == 18
-        with pytest.raises(TimeoutError):
-            sdss.SDSS.get_images(matches=xid, timeout=self.mintimeout,
-                                 cache=False)
+        try:
+            with pytest.raises(TimeoutError):
+                sdss.SDSS.get_images(matches=xid, timeout=self.mintimeout,
+                                     cache=False)
+        except URLError:
+            pytest.xfail("Failed to timeout: instead of timing out, we got a url "
+                         "error with 'No route to host'.  We don't know a "
+                         "workaround for this yet.")
 
     def test_sdss_spectrum(self):
         xid = sdss.SDSS.query_region(self.coords, spectro=True)
@@ -105,7 +99,13 @@ class TestSDSSRemote:
         xid = sdss.SDSS.query_specobj(plate=2340)
         assert isinstance(xid, Table)
         for row in table:
-            assert row in xid
+            i = np.nonzero(xid['specobjid'] == row['specobjid'])[0]
+            assert len(i) == 1
+            for j, c in enumerate(colnames):
+                if dtypes[j] is float:
+                    assert_allclose(xid[i][c], row[c])
+                else:
+                    assert xid[i][c] == row[c]
 
     def test_sdss_photoobj(self):
         colnames = ['ra', 'dec', 'objid', 'run', 'rerun', 'camcol', 'field']
@@ -126,7 +126,13 @@ class TestSDSSRemote:
         xid = sdss.SDSS.query_photoobj(run=1904, camcol=3, field=164)
         assert isinstance(xid, Table)
         for row in table:
-            assert row in xid
+            i = np.nonzero(xid['objid'] == row['objid'])[0]
+            assert len(i) == 1
+            for j, c in enumerate(colnames):
+                if dtypes[j] is float:
+                    assert_allclose(xid[i][c], row[c])
+                else:
+                    assert xid[i][c] == row[c]
 
     @pytest.mark.xfail(reason=("Timeout isn't raised since switching to "
                                "self._request, fix it before merging #586"))

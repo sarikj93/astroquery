@@ -1,9 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 import os
 import re
+from distutils.version import LooseVersion
 
-from astropy.extern import six
+import six
 import pytest
+import astropy
 import astropy.units as u
 from astropy.table import Table
 import numpy as np
@@ -340,25 +342,26 @@ def test_get_field_description():
 
 
 def test_votable_fields():
-    simbad.core.Simbad.add_votable_fields('rot', 'ze', 'z')
-    assert (set(simbad.core.Simbad.get_votable_fields()) ==
-            set(['main_id', 'coordinates', 'rot', 'ze', 'z']))
+    sb = simbad.core.Simbad()
+    sb.add_votable_fields('rot', 'z_value', 'velocity')
+    assert (set(sb.get_votable_fields()) ==
+            set(['main_id', 'coordinates', 'rot', 'z_value', 'velocity']))
     try:
-        simbad.core.Simbad.add_votable_fields('z')
+        sb.add_votable_fields('velocity')
     except KeyError:
         pass  # this is the expected response
-    assert (set(simbad.core.Simbad.get_votable_fields()) ==
-            set(['main_id', 'coordinates', 'rot', 'ze', 'z']))
-    simbad.core.Simbad.remove_votable_fields('rot', 'main_id', 'coordinates')
-    assert set(simbad.core.Simbad.get_votable_fields()) == set(['ze', 'z'])
-    simbad.core.Simbad.remove_votable_fields('rot', 'main_id', 'coordinates')
-    assert set(simbad.core.Simbad.get_votable_fields()) == set(['ze', 'z'])
-    simbad.core.Simbad.remove_votable_fields('ze', 'z')
-    assert (set(simbad.core.Simbad.get_votable_fields()) ==
+    assert (set(sb.get_votable_fields()) ==
+            set(['main_id', 'coordinates', 'rot', 'z_value', 'velocity']))
+    sb.remove_votable_fields('rot', 'main_id', 'coordinates')
+    assert set(sb.get_votable_fields()) == set(['z_value', 'velocity'])
+    sb.remove_votable_fields('rot', 'main_id', 'coordinates')
+    assert set(sb.get_votable_fields()) == set(['z_value', 'velocity'])
+    sb.remove_votable_fields('z_value', 'velocity')
+    assert (set(sb.get_votable_fields()) ==
             set(['main_id', 'coordinates']))
-    simbad.core.Simbad.add_votable_fields('rot', 'ze', 'z')
-    simbad.core.Simbad.reset_votable_fields()
-    assert (set(simbad.core.Simbad.get_votable_fields()) ==
+    sb.add_votable_fields('rot', 'z_value', 'velocity')
+    sb.reset_votable_fields()
+    assert (set(sb.get_votable_fields()) ==
             set(['main_id', 'coordinates']))
 
 
@@ -381,44 +384,47 @@ def test_query_criteria2(patch_post):
 
 
 def test_simbad_settings1():
-    assert simbad.Simbad.get_votable_fields() == ['main_id', 'coordinates']
-    simbad.core.Simbad.add_votable_fields('ra', 'dec(5)')
-    simbad.core.Simbad.remove_votable_fields('ra', 'dec')
-    assert (simbad.Simbad.get_votable_fields() ==
+    sb = simbad.core.Simbad()
+    assert sb.get_votable_fields() == ['main_id', 'coordinates']
+    sb.add_votable_fields('ra', 'dec(5)')
+    sb.remove_votable_fields('ra', 'dec')
+    assert (sb.get_votable_fields() ==
             ['main_id', 'coordinates', 'dec(5)'])
-    simbad.core.Simbad.reset_votable_fields()
+    sb.reset_votable_fields()
 
 
 def test_simbad_settings2():
-    assert simbad.Simbad.get_votable_fields() == ['main_id', 'coordinates']
-    simbad.core.Simbad.add_votable_fields('ra', 'dec(5)')
-    simbad.core.Simbad.remove_votable_fields('ra', 'dec', strip_params=True)
-    assert simbad.Simbad.get_votable_fields() == ['main_id', 'coordinates']
+    sb = simbad.core.Simbad()
+    assert sb.get_votable_fields() == ['main_id', 'coordinates']
+    sb.add_votable_fields('ra', 'dec(5)')
+    sb.remove_votable_fields('ra', 'dec', strip_params=True)
+    assert sb.get_votable_fields() == ['main_id', 'coordinates']
 
 
 def test_regression_votablesettings():
-    assert simbad.Simbad.get_votable_fields() == ['main_id', 'coordinates']
-    simbad.core.Simbad.add_votable_fields('ra', 'dec(5)')
+    sb = simbad.Simbad()
+    assert sb.get_votable_fields() == ['main_id', 'coordinates']
+    sb.add_votable_fields('ra', 'dec(5)')
     # this is now allowed:
-    simbad.core.Simbad.add_votable_fields('ra(d)', 'dec(d)')
-    assert simbad.Simbad.get_votable_fields() == ['main_id', 'coordinates',
-                                                  'ra', 'dec(5)', 'ra(d)',
-                                                  'dec(d)']
+    sb.add_votable_fields('ra(d)', 'dec(d)')
+    assert sb.get_votable_fields() == ['main_id', 'coordinates', 'ra',
+                                       'dec(5)', 'ra(d)', 'dec(d)']
     # cleanup
-    simbad.core.Simbad.remove_votable_fields('ra', 'dec', strip_params=True)
-    assert simbad.Simbad.get_votable_fields() == ['main_id', 'coordinates']
+    sb.remove_votable_fields('ra', 'dec', strip_params=True)
+    assert sb.get_votable_fields() == ['main_id', 'coordinates']
 
 
 def test_regression_votablesettings2():
-    assert simbad.Simbad.get_votable_fields() == ['main_id', 'coordinates']
-    simbad.core.Simbad.add_votable_fields('fluxdata(J)')
-    simbad.core.Simbad.add_votable_fields('fluxdata(H)')
-    simbad.core.Simbad.add_votable_fields('fluxdata(K)')
-    assert (simbad.Simbad.get_votable_fields() ==
+    sb = simbad.Simbad()
+    assert sb.get_votable_fields() == ['main_id', 'coordinates']
+    sb.add_votable_fields('fluxdata(J)')
+    sb.add_votable_fields('fluxdata(H)')
+    sb.add_votable_fields('fluxdata(K)')
+    assert (sb.get_votable_fields() ==
             ['main_id', 'coordinates',
              'fluxdata(J)', 'fluxdata(H)', 'fluxdata(K)'])
-    simbad.core.Simbad.remove_votable_fields('fluxdata', strip_params=True)
-    assert simbad.Simbad.get_votable_fields() == ['main_id', 'coordinates']
+    sb.remove_votable_fields('fluxdata', strip_params=True)
+    assert sb.get_votable_fields() == ['main_id', 'coordinates']
 
 
 def test_regression_issue388():
@@ -429,5 +435,6 @@ def test_regression_issue388():
         response.content = f.read()
     parsed_table = simbad.Simbad._parse_result(response,
                                                simbad.core.SimbadVOTableResult)
-    assert parsed_table['MAIN_ID'][0] == b'M   1'
+    truth = 'M   1' if LooseVersion(astropy.__version__) >= '4.1' else b'M   1'
+    assert parsed_table['MAIN_ID'][0] == truth
     assert len(parsed_table) == 1

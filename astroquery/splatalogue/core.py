@@ -15,11 +15,12 @@ from ..query import BaseQuery
 from ..utils import async_to_sync, prepend_docstr_nosections
 from . import conf
 from . import load_species_table
+from .utils import clean_column_headings
 
 __all__ = ['Splatalogue', 'SplatalogueClass']
 
 # example query of SPLATALOGUE directly:
-# http://www.cv.nrao.edu/php/splat/c.php?sid%5B%5D=64&sid%5B%5D=108&calcIn=&data_version=v3.0&from=&to=&frequency_units=MHz&energy_range_from=&energy_range_to=&lill=on&tran=&submit=Search&no_atmospheric=no_atmospheric&no_potential=no_potential&no_probable=no_probable&include_only_nrao=include_only_nrao&displayLovas=displayLovas&displaySLAIM=displaySLAIM&displayJPL=displayJPL&displayCDMS=displayCDMS&displayToyaMA=displayToyaMA&displayOSU=displayOSU&displayRecomb=displayRecomb&displayLisa=displayLisa&displayRFI=displayRFI&ls1=ls1&ls5=ls5&el1=el1
+# https://www.cv.nrao.edu/php/splat/c.php?sid%5B%5D=64&sid%5B%5D=108&calcIn=&data_version=v3.0&from=&to=&frequency_units=MHz&energy_range_from=&energy_range_to=&lill=on&tran=&submit=Search&no_atmospheric=no_atmospheric&no_potential=no_potential&no_probable=no_probable&include_only_nrao=include_only_nrao&displayLovas=displayLovas&displaySLAIM=displaySLAIM&displayJPL=displayJPL&displayCDMS=displayCDMS&displayToyaMA=displayToyaMA&displayOSU=displayOSU&displayRecomb=displayRecomb&displayLisa=displayLisa&displayRFI=displayRFI&ls1=ls1&ls5=ls5&el1=el1
 
 if sys.version_info.major == 2:
     # can't do unicode doctests in py2
@@ -114,6 +115,7 @@ class SplatalogueClass(BaseQuery):
         {'03023 H2CO - Formaldehyde': '194',
          '03109 H2COH+ - Hydroxymethylium ion': '224',
          '04406 c-H2COCH2 - Ethylene Oxide': '21',
+         '06029 NH2CONH2 - Urea': '21166',
          '07510 H2NCH2COOH - I v=0 - Glycine': '389',
          '07511 H2NCH2COOH - I v=1 - Glycine': '1312',
          '07512 H2NCH2COOH - I v=2 - Glycine': '1313',
@@ -166,7 +168,9 @@ class SplatalogueClass(BaseQuery):
                       chem_re_flags=0, energy_min=None, energy_max=None,
                       energy_type=None, intensity_lower_limit=None,
                       intensity_type=None, transition=None, version=None,
-                      exclude=None, only_NRAO_recommended=None,
+                      exclude=None,
+                      only_astronomically_observed=None,
+                      only_NRAO_recommended=None,
                       line_lists=None, line_strengths=None, energy_levels=None,
                       export=None, export_limit=None, noHFS=None,
                       displayHFS=None, show_unres_qn=None,
@@ -237,6 +241,8 @@ class SplatalogueClass(BaseQuery):
             Can also exclude ``'known'``.
             To exclude nothing, use 'none', not the python object None, since
             the latter is meant to indicate 'leave as default'
+        only_astronomically_observed : bool
+            Show only astronomically observed species?
         only_NRAO_recommended : bool
             Show only NRAO recommended species?
         line_lists : list
@@ -354,6 +360,8 @@ class SplatalogueClass(BaseQuery):
             for e in exclude:
                 payload['no_' + e] = 'no_' + e
 
+        if only_astronomically_observed:
+            payload['include_only_observed'] = 'include_only_observed'
         if only_NRAO_recommended:
             payload['include_only_nrao'] = 'include_only_nrao'
 
@@ -460,17 +468,16 @@ class SplatalogueClass(BaseQuery):
     def _parse_result(self, response, verbose=False):
         """
         Parse a response into an `~astropy.table.Table`
+
+        Parameters
+        ----------
+        clean_headers : bool
+            Attempt to simplify / clean up the column headers returned by
+            splatalogue to make them more terminal-friendly
         """
 
-        try:
-            result = ascii.read(response.text.split('\n'),
-                                delimiter=':',
-                                format='basic')
-        except TypeError:
-            # deprecated
-            result = ascii.read(response.text.split('\n'),
-                                delimiter=':',
-                                Reader=ascii.Basic)
+        result = ascii.read(response.text.split('\n'), delimiter=':',
+                            format='basic', fast_reader=False)
 
         return result
 
@@ -481,25 +488,12 @@ class SplatalogueClass(BaseQuery):
         keyword.  See the source for the defaults.
         """
         if columns is None:
-            columns = ('Species', 'Chemical Name', 'Resolved QNs', 'Freq-GHz',
-                       'Meas Freq-GHz', 'Log<sub>10</sub> (A<sub>ij</sub>)',
+            columns = ('Species', 'Chemical Name', 'Resolved QNs',
+                       'Freq-GHz(rest frame,redshifted)',
+                       'Meas Freq-GHz(rest frame,redshifted)',
+                       'Log<sub>10</sub> (A<sub>ij</sub>)',
                        'E_U (K)')
-        table = self.table[columns]
-        long_to_short = {'Log<sub>10</sub> (A<sub>ij</sub>)': 'log10(Aij)',
-                         'E_U (K)': 'EU_K',
-                         'E_U (cm^-1)': 'EU_cm',
-                         'E_L (K)': 'EL_K',
-                         'E_L (cm^-1)': 'EL_cm',
-                         'Chemical Name': 'Name',
-                         'Lovas/AST Intensity': 'Intensity',
-                         'Freq-GHz': 'Freq',
-                         'Freq Err': 'eFreq',
-                         'Meas Freq-GHz': 'MeasFreq',
-                         'Meas Freq Err': 'eMeasFreq',
-                         'Resolved QNs': 'QNs'}
-        for cn in long_to_short:
-            if cn in table.colnames:
-                table.rename_column(cn, long_to_short[cn])
+        table = clean_column_headings(self.table[columns])
         return table
 
 

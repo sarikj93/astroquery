@@ -11,8 +11,8 @@ import socket
 
 import requests
 
-from astropy.extern.six.moves.urllib_error import URLError
-from astropy.extern import six
+from six.moves.urllib_error import URLError
+import six
 import astropy.units as u
 from astropy import coordinates as coord
 from collections import OrderedDict
@@ -21,7 +21,7 @@ from astropy.io import fits, votable
 
 from astropy.coordinates import BaseCoordinateFrame
 
-from ..exceptions import TimeoutError
+from ..exceptions import TimeoutError, InputWarning
 from .. import version
 
 
@@ -83,7 +83,7 @@ def send_request(url, data, timeout, request_type='POST', headers={},
 
     if hasattr(timeout, "unit"):
         warnings.warn("Converting timeout to seconds and truncating "
-                      "to integer.")
+                      "to integer.", InputWarning)
         timeout = int(timeout.to(u.s).value)
 
     try:
@@ -155,17 +155,27 @@ def parse_coordinates(coordinates):
     """
     if isinstance(coordinates, six.string_types):
         try:
-            c = ICRSCoord.from_name(coordinates)
-        except coord.name_resolve.NameResolveError:
-            try:
-                c = ICRSCoordGenerator(coordinates)
-                warnings.warn("Coordinate string is being interpreted as an "
-                              "ICRS coordinate.")
-            except u.UnitsError:
-                warnings.warn("Only ICRS coordinates can be entered as "
-                              "strings.\n For other systems please use the "
-                              "appropriate astropy.coordinates object.")
-                raise u.UnitsError
+            c = ICRSCoordGenerator(coordinates)
+            warnings.warn("Coordinate string is being interpreted as an "
+                          "ICRS coordinate.", InputWarning)
+
+        except u.UnitsError:
+            warnings.warn("Only ICRS coordinates can be entered as "
+                          "strings.\n For other systems please use the "
+                          "appropriate astropy.coordinates object.", InputWarning)
+            raise u.UnitsError
+        except ValueError as err:
+            if isinstance(err.args[1], u.UnitsError):
+                try:
+                    c = ICRSCoordGenerator(coordinates, unit='deg')
+                    warnings.warn("Coordinate string is being interpreted as an "
+                                  "ICRS coordinate provided in degrees.", InputWarning)
+
+                except ValueError:
+                    c = ICRSCoord.from_name(coordinates)
+            else:
+                c = ICRSCoord.from_name(coordinates)
+
     elif isinstance(coordinates, CoordClasses):
         if hasattr(coordinates, 'frame'):
             c = coordinates
@@ -278,7 +288,7 @@ class TableList(list):
     def pprint(self, **kwargs):
         """ Helper function to make API more similar to astropy.Tables """
         if kwargs != {}:
-            warnings.warn("TableList is a container of astropy.Tables.")
+            warnings.warn("TableList is a container of astropy.Tables.", InputWarning)
         self.print_table_list()
 
 
@@ -344,7 +354,7 @@ class FileContainer(object):
         if (os.path.splitext(target)[1] == '.fits' and not
                 ('encoding' in kwargs and kwargs['encoding'] == 'binary')):
             warnings.warn("FITS files must be read as binaries; error is "
-                          "likely.")
+                          "likely.", InputWarning)
         self._readable_object = get_readable_fileobj(target, **kwargs)
 
     def get_fits(self):
@@ -353,6 +363,9 @@ class FileContainer(object):
         and return the file parsed as FITS HDUList
         """
         filedata = self.get_string()
+
+        if len(filedata) == 0:
+            raise TypeError("The file retrieved was empty.")
 
         self._fits = fits.HDUList.fromstring(filedata)
 
